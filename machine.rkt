@@ -89,22 +89,7 @@
 ;; Machine definition
 ;;;;;;;;;;;;;;;;;;;;;;;
 #|
-<Instruction> :: = INT_CONST <num>
-        | BOOL_CONST <bool>
-        | CAST <TYPE> @duda@
-        | ADD
-        | SUB
-        | LESS
-        | EQ
-        | AND
-        | OR
-        | NOT
-        | ACCESS <num>
-        | APPLY
-        | RETURN
-        | IF list <Intruction> list <Instruction>
-        | CLOSURE list <Instruction> <TYPE>
-        | CHECKCAST <TYPE>
+Instructions
 |#
 (deftype Instruction
   (INT_CONST n)
@@ -207,7 +192,7 @@
                  [(list (EQ) tail ...) (def (INT_CONST n1) (stack-peek stack))
                                        (def (INT_CONST n2) (stack-peek (stack-pop stack)))
                                        (def new-stack (stack-pop (stack-pop stack)))
-                                       (run tail (stack-push new-stack (INT_CONST (eq? n1 n2))) env )]
+                                       (run tail (stack-push new-stack (BOOL_CONST (eq? n1 n2))) env )]
 
                  [(list (AND) tail ...) (def (BOOL_CONST n1) (stack-peek stack))
                                         (def (BOOL_CONST n2) (stack-peek (stack-pop stack)))
@@ -241,6 +226,7 @@
 
 
                  )))])))
+
 
 ;definir esta función para que la máquina se capaz de ejecutar correctamente CHECKCAST para el caso de cast entre funciones
 (define (m-subtype? t1 t2) (error "function not implemented"))
