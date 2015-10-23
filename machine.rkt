@@ -171,7 +171,7 @@ Instructions
                  [(list (CHECKCAST type) tail ...) (match (stack-peek stack)
                                                      [(INT_CONST n) (if (MTNum? type) (run tail stack env) (error "CAST_ERROR"))]
                                                     [(BOOL_CONST n) (if (MTBool? type) (run tail stack env) (error "CAST_ERROR"))]
-                                                     [(closureV ins env t) (if (m-subtype? type t) (run tail stack env) (error "CAST_ERROR"))]
+                                                     [(closureV ins fenv t) (if (m-subtype? type t) (run tail stack env) (error "CAST_ERROR"))]
                                                      )]
 
                  [(list (IF tb fb) tail ...) (def (BOOL_CONST b) (stack-peek stack))
@@ -227,9 +227,7 @@ Instructions
 
                  )))])))
 
-
-;definir esta función para que la máquina se capaz de ejecutar correctamente CHECKCAST para el caso de cast entre funciones
-(define (m-subtype? t1 t2) (error "function not implemented"))
+(define (m-subtype? t1 t2) (error "not implemented"))
 
 ;; debug-run :: List[Instruction], Stack -> void
 ;; Debug function for the machine
