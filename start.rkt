@@ -19,6 +19,7 @@
          | {with : <TYPE> {<id> : <TYPE> <expr>} <expr>}
          | {fun {<id> : <TYPE>} : <TYPE> <expr>}
          | {<expr> <expr>}         
+         | {cast <TYPE> <expr>}         
  
 <TYPE> ::= Num
          | Bool
@@ -50,15 +51,129 @@
 
 
 
-(define (parse-t s-expr) #f)
+(define (parse-t s-expr) 
+  (match s-expr
+    ['Num (TNum)]
+    ['Bool (TBool)]
+    ['Any (TAny)]
+    [(list a '-> b) (TFun (parse-t a) (parse-t b))]
+    [(list a) (parse-t a)]
+    ))
+ 
+(define (parse expr)  
+  (match expr
+    [(? number?) (num expr)]
+    [(? boolean?) (bool expr)]
+    [(? symbol?) (id expr)]
+    [(list 'cast a b) (cast (parse-t a) (parse b))]
+    [(list '+ a b) (add (parse a) (parse b))]
+    [(list '- a b) (add (parse a) (parse b))]
+    [(list '= a b) (my-eq (parse a) (parse b))]
+    [(list '< a b) (my-less (parse a) (parse b))]
+    [(list 'and a b) (my-and (parse a) (parse b))]
+    [(list 'or a b) (my-or (parse a) (parse b))]
+    [(list 'not a) (my-not (parse a))]
+    [(list 'if a b c) (my-if (parse a) (parse b) (parse c))]
+    [(list 'fun a ': c d) (fun (first a) (parse-t (third a)) (parse d) (parse-t c))]
+    [(list 'with ': type id-expr s-expr) 
+     (app (fun (first id-expr) (parse-t (third id-expr)) (parse s-expr) (parse-t type)) (parse (fourth id-expr)))]
+    [(cons a b) (app (parse (first expr)) (parse (second expr)))]
+    ))
 
-(define (parse expr)  #f )
+(define (deBruijn expr) 
+  (define (deBruijn-expr expr ids)
+  ;indefOf:: value list[value] pos -> pos
+    (define (indexOf-rec v l [pos 0])
+      (match l
+        [(list) -1]
+        [(cons x r)(if (equal? x v) pos 
+                       (indexOf-rec v r (add1 pos)))]))
+    (define (indexOf v l)
+      (indexOf-rec v l 0))
+    (match expr
+      [(num n) (num n)]    
+      [(bool n) (bool n)]   
+      [(add l r) (add (deBruijn-expr l ids) (deBruijn-expr r ids))]
+      [(sub l r) (sub (deBruijn-expr l ids) (deBruijn-expr r ids))]
+      [(my-eq l r) (my-eq (deBruijn-expr l ids) (deBruijn-expr r ids))]
+      [(my-less l r) (my-less (deBruijn-expr l ids) (deBruijn-expr r ids))]
+      [(my-and l r) (my-and (deBruijn-expr l ids) (deBruijn-expr r ids))]
+      [(my-or l r) (my-or (deBruijn-expr l ids) (deBruijn-expr r ids))]
+      [(my-not l) (my-not (deBruijn-expr l ids))]
+      [(my-if l r z) (my-if (deBruijn-expr l ids) (deBruijn-expr r ids) (deBruijn-expr z ids))]
+      [(id x) 
+       (define pos (indexOf x ids))
+       (if (>= pos 0)
+           (acc pos)
+           (error "unbound identifier"))]  
+      [(app a b) (app (deBruijn-expr a ids) (deBruijn-expr b ids))]
+      [(fun id targ body tbody) (fun-db (deBruijn-expr body (append (list id) ids)) (TFun targ tbody))]
+    ))
+  (deBruijn-expr expr '()))
 
-(define (deBruijn expr) #f)
 
-(define (compile expr) #f)
+(define (compile expr) 
+  (define (stack expr lst)
+    (match expr
+      [(num n) (cons lst (INT_CONST n))]
+      [(bool n) (cons lst (BOOL_CONST n))]
+      [(acc n) (cons lst (ACCESS n))]
+      [(add l r) (append lst (stack l lst) (stack r lst) (list (ADD)))]
+      [(sub l r) (append lst (stack l lst) (stack r lst) (list (SUB)))]
+      [(my-eq l r) (append lst (stack l lst) (stack r lst) (list (EQ)))]
+      [(my-and l r) (append lst (stack l lst) (stack r lst) (list (AND)))]
+      [(my-or l r) (append lst (stack l lst) (stack r lst) (list (OR)))]
+      [(my-not l) (append lst (stack l lst) (list (EQ)))]
+      [(fun-db a b) (CLOSURE (append lst (stack a lst) (stack b lst)) (list (APPLY)))]
+      ))
+  (stack expr '()))
+
 
 (define (typeof expr) #f)
+  #|(define (typeof-env sexpr typed-env)
+  (match sexpr
+    [(num n) (TInt)]
+    [(bool b) (TBool)]
+    [(id x) (env-lookup x typed-env)]
+    ;AE
+    [(add l r)(check-type-AE l r typed-env)]
+    [(sub l r)(check-type-AE l r typed-env)]
+    ;preposiciones        
+    [(my-and p q) 
+     (if (and (TBool? (typeof p typed-env))
+              (TBool? (typeof q typed-env)))
+         (TBool)
+         (error "TYPE_ERROR: TBool expression expected"))]
+    [(my-or p q) (if (and (TBool? (typeof p typed-env))
+                          (TBool? (typeof q typed-env)))
+                     (TBool)
+                     (error "TYPE_ERROR: TBool expression expected"))]
+    [(my-not p) (if (TBool? (typeof p typed-env))
+                    (TBool)
+                    (error "TYPE_ERROR: TBool expression expected"))]
+    [(my-less a b) (if (and (TInt? (typeof a typed-env))
+                           (TInt? (typeof b typed-env)))
+                      (TBool)
+                      (error "TYPE_ERROR: TInt expression expected"))]
+    [(my-if c l r) 
+     (let [(tc (typeof c typed-env))
+           (tl (typeof l typed-env))
+           (tr (typeof r typed-env))]
+       (if (not (TBool? tc))
+           (error "TYPE_ERROR: TBool expression expected")
+           (if (equal? tl tr)
+               tl
+               (error "TYPE_ERROR: same type expected"))))]
+    [(my-eq a b)
+     (let ([ta (typeof a typed-env)]
+           [tb (typeof b typed-env)])
+       (if (equal? a b)
+           (TBool)
+           (error "TYPE_ERROR: same type expected")))]
+    [(with x e b) (typeof b (extend-env x (typeof e typed-env) typed-env))]
+    [(app f-id b) (error "not supported expression")]
+    ))
+  (typeof-env expr (empty-env)))|#
 
 (define (typeof-with-sub expr) #f)
 

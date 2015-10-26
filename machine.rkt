@@ -227,7 +227,13 @@ Instructions
 
                  )))])))
 
-(define (m-subtype? t1 t2) (error "not implemented"))
+(define (m-subtype? t1 t2)
+  (if (equal? t1 t2) #t
+      (match t1
+        [(MTFun a b) (and (MTFun? t2) (and (m-subtype? (MTFun-arg t1) (MTFun-arg t2)) (m-subtype? (MTFun-ret t1) (MTFun-ret t2))))]
+        [(MTNum) (or (MTNum? t2) (MTAny? t2))]
+        [(MTBool) (or (MTBool? t2) (MTAny? t2))]
+        [_ #f])))
 
 ;; debug-run :: List[Instruction], Stack -> void
 ;; Debug function for the machine
