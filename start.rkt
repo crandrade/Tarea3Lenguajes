@@ -144,51 +144,68 @@
   (stack expr '()))
 
 
-(define (typeof expr) #f)
-  #|(define (typeof-env sexpr typed-env)
+(define (typeof expr)
+ (define (typeof-env sexpr typed-env)
   (match sexpr
-    [(num n) (TInt)]
+    [(num n) (TNum)]
     [(bool b) (TBool)]
-    [(id x) (env-lookup x typed-env)]
+    [(id x) (if (hash-has-key? typed-env x) 
+                (hash-ref typed-env x) 
+                (error "TYPE_ERROR: unbound identifier"))]
     ;AE
-    [(add l r)(check-type-AE l r typed-env)]
-    [(sub l r)(check-type-AE l r typed-env)]
+    [(add l r)
+     (if (and (TNum? (typeof-env l typed-env)) (TNum (typeof-env r typed-env)))
+         (TNum)
+         (error "TYPE_ERROR: TNum expression expected"))]
+    [(sub l r)      
+     (if (and (TNum? (typeof-env l typed-env)) (TNum (typeof-env r typed-env)))
+         (TNum)
+         (error "TYPE_ERROR: TNum expression expected"))]
     ;preposiciones        
     [(my-and p q) 
-     (if (and (TBool? (typeof p typed-env))
-              (TBool? (typeof q typed-env)))
+     (if (and (TBool? (typeof-env p typed-env))
+              (TBool? (typeof-env q typed-env)))
          (TBool)
          (error "TYPE_ERROR: TBool expression expected"))]
-    [(my-or p q) (if (and (TBool? (typeof p typed-env))
-                          (TBool? (typeof q typed-env)))
+    [(my-or p q) (if (and (TBool? (typeof-env p typed-env))
+                          (TBool? (typeof-env q typed-env)))
                      (TBool)
                      (error "TYPE_ERROR: TBool expression expected"))]
-    [(my-not p) (if (TBool? (typeof p typed-env))
+    [(my-not p) (if (TBool? (typeof-env p typed-env))
                     (TBool)
                     (error "TYPE_ERROR: TBool expression expected"))]
-    [(my-less a b) (if (and (TInt? (typeof a typed-env))
-                           (TInt? (typeof b typed-env)))
+    [(my-less a b) (if (and (TNum? (typeof-env a typed-env))
+                           (TNum? (typeof-env b typed-env)))
                       (TBool)
-                      (error "TYPE_ERROR: TInt expression expected"))]
+                      (error "TYPE_ERROR: TNum expression expected"))]
     [(my-if c l r) 
-     (let [(tc (typeof c typed-env))
-           (tl (typeof l typed-env))
-           (tr (typeof r typed-env))]
+     (let [(tc (typeof-env c typed-env))
+           (tl (typeof-env l typed-env))
+           (tr (typeof-env r typed-env))]
        (if (not (TBool? tc))
            (error "TYPE_ERROR: TBool expression expected")
            (if (equal? tl tr)
                tl
                (error "TYPE_ERROR: same type expected"))))]
     [(my-eq a b)
-     (let ([ta (typeof a typed-env)]
-           [tb (typeof b typed-env)])
+     (let ([ta (typeof-env a typed-env)]
+           [tb (typeof-env b typed-env)])
        (if (equal? a b)
            (TBool)
            (error "TYPE_ERROR: same type expected")))]
-    [(with x e b) (typeof b (extend-env x (typeof e typed-env) typed-env))]
-    [(app f-id b) (error "not supported expression")]
+    [(fun x e b tb) (if (equal? (typeof-env b (hash-set typed-env x e)) 
+                                tb)
+                        (TFun e tb)
+                        (error "TYPE_ERROR: same type expected"))]
+    [(app f-id b) (if (fun? f-id)
+                      (let [(f (typeof-env f-id typed-env)) 
+                            (r (typeof-env b typed-env))] 
+                        (if (equal? (TFun-arg f) r)
+                            f
+                            (error "TYPE_ERROR: same type expected")))
+                      (error "TYPE_ERROR: function expected"))]
     ))
-  (typeof-env expr (empty-env)))|#
+  (typeof-env expr (make-immutable-hash '())))
 
 (define (typeof-with-sub expr) #f)
 
