@@ -41,11 +41,31 @@
 ;;test compile
 (test (compile (deBruijn (parse '2)))
 (list (INT_CONST 2)))
-(test (compile 'expr) #t)
 
-(test (compile 'expr) #t)
+(test (compile (deBruijn (parse '{{fun {x : Num} : Bool
+                                   {< x 10}} {+ 2 3}}))) 
+      (list
+       (INT_CONST 3) (INT_CONST 2) (ADD)
+       (CLOSURE 
+        (list (INT_CONST 10) 
+              (ACCESS 0) 
+              (LESS) 
+              (RETURN)) 
+        (MTFun (MTNum) (MTBool)))
+       (APPLY)))
 
-(test (compile 'expr) #t)
+(test (compile (parse '{cast Num (and #t #f)}))
+      (list (BOOL_CONST #f) (BOOL_CONST #t) (AND) 
+            (CHECKCAST (MTNum))))
+
+(test (compile (deBruijn (parse '{with : Num {y : Num 2}
+                                 {+ 1 y}}))) 
+      (list
+       (INT_CONST 2)
+       (CLOSURE
+        (list (ACCESS 0) (INT_CONST 1) (ADD) (RETURN))
+        (MTFun (MTNum) (MTNum)))
+       (APPLY)))
 
 ;; test typeof
 (test (typeof 'expr) #t)

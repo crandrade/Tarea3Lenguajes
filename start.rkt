@@ -50,7 +50,8 @@
   (TAny))
 
 
-
+;; parse-t ::= s-expr => TYPE
+;; transforms a s-expr into a TYPE expression
 (define (parse-t s-expr) 
   (match s-expr
     ['Num (TNum)]
@@ -60,6 +61,8 @@
     [(list a) (parse-t a)]
     ))
  
+;; parse ::= s-expr => Expr
+;; transform a s-expr into an Expr
 (define (parse expr)  
   (match expr
     [(? number?) (num expr)]
@@ -80,6 +83,8 @@
     [(cons a b) (app (parse (first expr)) (parse (second expr)))]
     ))
 
+;; deBruijn :: Expr => Expr
+;; replaces non-free vars with indexes, keeping lexic scope
 (define (deBruijn expr) 
   (define (deBruijn-expr expr ids)
   ;indefOf:: value list[value] pos -> pos
@@ -113,18 +118,28 @@
 
 
 (define (compile expr) 
+  (define (stack-type expr)
+    (match expr
+      [(TNum) (MTNum)]
+      [(TBool) (MTBool)]
+      [(TAny) (MTAny)]
+      [(TFun a b) (MTFun (stack-type a) (stack-type b))]))
   (define (stack expr lst)
     (match expr
-      [(num n) (cons lst (INT_CONST n))]
-      [(bool n) (cons lst (BOOL_CONST n))]
-      [(acc n) (cons lst (ACCESS n))]
-      [(add l r) (append lst (stack l lst) (stack r lst) (list (ADD)))]
-      [(sub l r) (append lst (stack l lst) (stack r lst) (list (SUB)))]
-      [(my-eq l r) (append lst (stack l lst) (stack r lst) (list (EQ)))]
-      [(my-and l r) (append lst (stack l lst) (stack r lst) (list (AND)))]
-      [(my-or l r) (append lst (stack l lst) (stack r lst) (list (OR)))]
-      [(my-not l) (append lst (stack l lst) (list (EQ)))]
-      [(fun-db a b) (CLOSURE (append lst (stack a lst) (stack b lst)) (list (APPLY)))]
+      [(num n) (append lst (list (INT_CONST n)))]
+      [(bool n) (append lst (list (BOOL_CONST n)))]
+      [(acc n) (append lst (list (ACCESS n)))]
+      [(cast a b) (append lst (stack b lst) (list (CHECKCAST (stack-type a))))]
+      [(add l r) (append lst (stack r lst) (stack l lst) (list (ADD)))]
+      [(sub l r) (append lst (stack r lst) (stack l lst) (list (SUB)))]
+      [(my-eq l r) (append lst (stack r lst) (stack l lst) (list (EQ)))]
+      [(my-less l r) (append lst (stack r lst) (stack l lst) (list (LESS)))]
+      [(my-and l r) (append lst (stack r lst) (stack l lst) (list (AND)))]
+      [(my-or l r) (append lst (stack r lst) (stack l lst) (list (OR)))]
+      [(my-not l) (append lst (stack l lst) (list (NOT)))]
+      [(fun-db a b) (append lst (list (CLOSURE 
+                     (append lst (stack a lst) (list (RETURN))) (stack-type b))))]
+      [(app a b) (append lst (stack b lst) (stack a lst) (list (APPLY)))]
       ))
   (stack expr '()))
 
