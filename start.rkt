@@ -348,7 +348,8 @@
                             f
                             (error "TYPE_ERROR")))
                       (error "TYPE_ERROR"))]
-    )))
+    ))
+  (typeof-cast-env expr (make-immutable-hash '())))
 
 ;; typed-compile ::= sexpr => List
 ;; compiles the s-expression into an executable list/stack of 
