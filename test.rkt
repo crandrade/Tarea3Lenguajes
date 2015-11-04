@@ -10,6 +10,9 @@
 (test (parse-t '{Bool -> (Bool -> Num)}) (TFun (TBool) (TFun (TBool) (TNum))))
 
 ;; test parse
+(test (parse '{+ {- 1 2} 3}) 
+      (add (sub (num 1) (num 2)) (num 3)))
+
 (test (parse '{fun {x : Num} : Bool #f})
       (fun 'x (TNum) (bool #f) (TBool)))
 
@@ -24,6 +27,13 @@
 
 ;; test DeBruijn
 ;;(test (deBruijn 'expr) #t)
+(test (deBruijn 
+       (parse '{with : Num {x : Num 3} 
+                     {+ {- 1 2} x}}))
+      (app
+       (fun-db (add (sub (num 1) (num 2)) (acc 0)) (TFun (TNum) (TNum)))
+       (num 3)))
+
 
 (test (deBruijn (parse '{+ 1 {with : Num {x : Num 1}
                            {with : Num {y : Num 2}
