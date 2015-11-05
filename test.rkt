@@ -209,7 +209,7 @@
 
 (test (m-subtype? (MTFun (MTAny) (MTBool)) (MTFun (MTAny) (MTAny))) #t)
 
-(test (m-subtype? (MTFun (MTNum) (MTBool)) (MTFun (MTAny) (MTAny))) #t)
+(test (m-subtype? (MTFun (MTNum) (MTBool)) (MTFun (MTAny) (MTAny))) #f)
 
 (test (m-subtype? (MTFun (MTAny) (MTAny)) (MTFun (MTAny) (MTBool))) #f)
 
