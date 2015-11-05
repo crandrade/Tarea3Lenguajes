@@ -206,13 +206,11 @@
                                 tb)
                         (TFun e tb)
                         (error "TYPE_ERROR"))]
-    [(app f-id b) (if (fun? f-id)
-                      (let [(f (typeof-env f-id typed-env)) 
+    [(app f-id b) (let [(f (typeof-env f-id typed-env)) 
                             (r (typeof-env b typed-env))] 
                         (if (equal? (TFun-arg f) r)
                             (TFun-ret f)
-                            (error "TYPE_ERROR")))
-                      (error "TYPE_ERROR"))]
+                            (error "TYPE_ERROR")))]
     ))
   (typeof-env expr (make-immutable-hash '())))
 
@@ -224,11 +222,12 @@
   (define (subtype? t1 t2)
     (if (equal? t1 t2) #t
       (match t1
-        [(TFun a b) (and (TFun? t2) 
-                          (and (subtype? (TFun-arg t1) 
-                                           (TFun-arg t2)) 
+        [(TFun a b) (or (and (TFun? t2) 
+                          (and (subtype? (TFun-arg t2) 
+                                           (TFun-arg t1)) 
                                (subtype? (TFun-ret t1) 
-                                           (TFun-ret t2))))]
+                                           (TFun-ret t2))))
+                        (TAny? t2))]
         [(TNum) (or (TNum? t2) (TAny? t2))]
         [(TBool) (or (TBool? t2) (TAny? t2))]
         [_ #f])))
@@ -304,13 +303,14 @@
     (if (equal? t1 t2) #t
       (match t1
         [(TFun a b) (or (and (TFun? t2) 
-                          (and (subtype? (TFun-arg t1) 
-                                           (TFun-arg t2)) 
+                          (and (subtype? (TFun-arg t2) 
+                                           (TFun-arg t1)) 
                                (subtype? (TFun-ret t1) 
                                            (TFun-ret t2))))
                         (TAny? t2))]
         [(TNum) (or (TNum? t2) (TAny? t2))]
         [(TBool) (or (TBool? t2) (TAny? t2))]
+        [(TAny) (TFun? t2)]
         [_ #f])))
  (define (typeof-cast-env sexpr typed-env)
   (match sexpr
@@ -321,17 +321,19 @@
                 (error "TYPE_ERROR"))]
     [(cast targ arg) 
      (match targ
-       [(TBool) (if (TBool? (typeof-cast-env arg typed-env)) 
-                    targ 
-                    (error "TYPE_ERROR"))]
-       [(TNum) (if (TNum? (typeof-cast-env arg typed-env)) 
-                    targ 
-                    (error "TYPE_ERROR"))]
+       [(TBool) (let [(t (typeof-cast-env arg typed-env))]
+                  (if (or (TBool? t) (TAny? t))  
+                      targ 
+                      (error "TYPE_ERROR")))]
+       [(TNum) (let [(t (typeof-cast-env arg typed-env))]
+                  (if (or (TNum? t) (TAny? t))  
+                      targ 
+                      (error "TYPE_ERROR")))]
        [(TAny) (error "TYPE_ERROR")]
-       [(TFun a b) (let [( f (typeof-cast-env arg typed-env))]
-                          (if (or (TAny? a) (TAny? b))
-                              (error "TYPE_ERROR")
-                       targ))])]
+       [(TFun a b) (let [(f (typeof-cast-env arg typed-env))]
+                          (if (subtype? targ f)
+                              targ
+                              (error "TYPE_ERROR" targ f)))])]
     ;AE
     [(add l r)
      (if (and (TNum? (typeof-cast-env l typed-env)) 
@@ -368,20 +370,17 @@
            (error "TYPE_ERROR")
            (if (equal? tl tr)
                tl
-               (error "TYPE_ERROR"))))]
+               (TAny))))]
     [(my-eq a b)
      (let ([ta (typeof-cast-env a typed-env)]
            [tb (typeof-cast-env b typed-env)])
        (if (equal? ta tb)
            (TBool)
            (error "TYPE_ERROR")))]    
-    [(fun x e b tb) (if (subtype? 
-                         (typeof-cast-env 
-                          b 
-                          (hash-set typed-env x e))
-                         tb)
+    [(fun x e b tb) (let [(f (typeof-cast-env b (hash-set typed-env x e)))]
+                      (if (subtype? f tb)
                         (TFun e tb)
-                        (error "TYPE_ERROR"))]
+                        (error "TYPE_ERROR")))]
     [(app f-id b) 
      (let [(ff (typeof-cast-env f-id typed-env))
            (bb (typeof-cast-env b typed-env))]

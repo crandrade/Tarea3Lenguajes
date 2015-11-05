@@ -231,8 +231,8 @@ Instructions
   (if (equal? t1 t2) #t
       (match t1
         [(MTFun a b) (or (and (MTFun? t2) 
-                          (and (m-subtype? (MTFun-arg t1) 
-                                           (MTFun-arg t2)) 
+                          (and (m-subtype? (MTFun-arg t2) 
+                                           (MTFun-arg t1)) 
                                (m-subtype? (MTFun-ret t1) 
                                            (MTFun-ret t2))))
                          (MTAny? t2))]

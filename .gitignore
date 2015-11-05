@@ -19,6 +19,7 @@ DerivedData
 *.rkt~
 *handin*
 testhiho.rkt
+testtommy.rkt
 respuestahandin*
 # CocoaPods
 #
