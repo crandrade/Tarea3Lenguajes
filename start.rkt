@@ -217,7 +217,7 @@
   (typeof-env expr (make-immutable-hash '())))
 
 
-;; typeof ::= Expr => TYPE
+;; typeof-with-sub ::= Expr => TYPE
 ;; gives the TYPE of a valid expression, or an error, 
 ;; considering subtypes
 (define (typeof-with-sub expr)
@@ -241,11 +241,11 @@
                 (error "TYPE_ERROR"))]
     ;AE
     [(add l r)
-     (if (and (TNum? (typeof-sub-env l typed-env)) (TNum (typeof-sub-env r typed-env)))
+     (if (and (TNum? (typeof-sub-env l typed-env)) (TNum? (typeof-sub-env r typed-env)))
          (TNum)
          (error "TYPE_ERROR"))]
     [(sub l r)      
-     (if (and (TNum? (typeof-sub-env l typed-env)) (TNum (typeof-sub-env r typed-env)))
+     (if (and (TNum? (typeof-sub-env l typed-env)) (TNum? (typeof-sub-env r typed-env)))
          (TNum)
          (error "TYPE_ERROR"))]
     ;preposiciones        
@@ -329,12 +329,12 @@
     ;AE
     [(add l r)
      (if (and (TNum? (typeof-cast-env l typed-env)) 
-              (TNum (typeof-cast-env r typed-env)))
+              (TNum? (typeof-cast-env r typed-env)))
          (TNum)
          (error "TYPE_ERROR"))]
     [(sub l r)      
      (if (and (TNum? (typeof-cast-env l typed-env)) 
-              (TNum (typeof-cast-env r typed-env)))
+              (TNum? (typeof-cast-env r typed-env)))
          (TNum)
          (error "TYPE_ERROR"))]
     ;preposiciones        

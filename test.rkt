@@ -158,9 +158,38 @@
 (test (typed-compile '{cast Num (and #t #f)})
 (list (BOOL_CONST #f) (BOOL_CONST #t) (AND) (CHECKCAST (MTNum))))
 
-(test (typed-compile 'expr) #t)
+(test
+ (typed-compile '{+ 3 {with : Num {x : Num 1}
+                               {with : Num {y : Num 2}
+                                     {cast Num {+ x y}}}}}) 
+ (list
+    (INT_CONST 1)
+    (CLOSURE (list (INT_CONST 2) 
+                   (CLOSURE (list (ACCESS 0) 
+                                  (ACCESS 1) 
+                                  (ADD)
+                                  (CHECKCAST (MTNum))
+                                  (RETURN)) 
+                            (MTFun (MTNum) (MTNum))) 
+                   (APPLY) (RETURN)) 
+             (MTFun (MTNum) (MTNum)))
+    (APPLY)
+    (INT_CONST 3)
+    (ADD)))
 
-(test (typed-compile 'expr) #t)
+(test
+  (typed-compile 
+   '{cast Bool {{fun {x : Num} : Bool {< x 10}} {+ 2 3}}})
+  (list (INT_CONST 3) 
+        (INT_CONST 2) 
+        (ADD) 
+        (CLOSURE (list (INT_CONST 10) 
+                       (ACCESS 0) 
+                       (LESS) 
+                       (RETURN)) 
+                 (MTFun (MTNum) (MTBool))) 
+        (APPLY)
+        (CHECKCAST (MTBool))))
 
 ;; test m-subtype?
 (test (m-subtype? (MTNum) (MTNum)) #t)
