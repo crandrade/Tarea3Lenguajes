@@ -130,6 +130,15 @@
 
 (test (typeof-with-cast (parse '{{fun { x : Num} : Any  x} 3})) (TAny))
 
+(test (typeof-with-cast (parse '{with : Bool {id : (Any -> Any)
+                           {fun {x : Any} : Any x}}
+                {with : Bool {g : ((Bool -> Bool) -> Bool)
+                                {fun {f : (Bool -> Bool)} : Bool {f #t}}}
+                      {with : Bool {f : (Bool -> Bool)
+                                      {fun {x : Bool} : Bool x}}
+                            {g {cast (Bool -> Bool) {id f}}}}}}))
+      (TBool))
+
 ;; test typed-compile
 (test (typed-compile '{cast Num (and #t #f)})
 (list (BOOL_CONST #f) (BOOL_CONST #t) (AND) (CHECKCAST (MTNum))))
