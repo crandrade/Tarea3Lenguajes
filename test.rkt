@@ -1,7 +1,7 @@
 #lang play
 (require "start.rkt")
 (require "machine.rkt")
-(print-only-errors #f)
+(print-only-errors #t)
 
 ;; test parse-t
 (test (parse-t '{{Num -> Num} -> Bool})
@@ -212,3 +212,5 @@
 (test (m-subtype? (MTFun (MTNum) (MTBool)) (MTFun (MTAny) (MTAny))) #t)
 
 (test (m-subtype? (MTFun (MTAny) (MTAny)) (MTFun (MTAny) (MTBool))) #f)
+
+(test (m-subtype? (MTFun (MTAny) (MTAny)) (MTAny)) #t)

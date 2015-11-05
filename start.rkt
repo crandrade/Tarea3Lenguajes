@@ -387,7 +387,7 @@
            (bb (typeof-cast-env b typed-env))]
        (if (subtype? bb (TFun-arg ff))
                           (TFun-ret ff)
-                          (error "TYPE_ERROR" bb (TFun-arg ff))))]
+                          (error "TYPE_ERROR")))]
     ))
   (typeof-cast-env expr (make-immutable-hash '())))
 
