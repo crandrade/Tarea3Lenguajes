@@ -303,11 +303,12 @@
   (define (subtype? t1 t2)
     (if (equal? t1 t2) #t
       (match t1
-        [(TFun a b) (and (TFun? t2) 
+        [(TFun a b) (or (and (TFun? t2) 
                           (and (subtype? (TFun-arg t1) 
                                            (TFun-arg t2)) 
                                (subtype? (TFun-ret t1) 
-                                           (TFun-ret t2))))]
+                                           (TFun-ret t2))))
+                        (TAny? t2))]
         [(TNum) (or (TNum? t2) (TAny? t2))]
         [(TBool) (or (TBool? t2) (TAny? t2))]
         [_ #f])))
@@ -320,12 +321,17 @@
                 (error "TYPE_ERROR"))]
     [(cast targ arg) 
      (match targ
-       [(TBool) targ]
-       [(TNum) targ]
+       [(TBool) (if (TBool? (typeof-cast-env arg typed-env)) 
+                    targ 
+                    (error "TYPE_ERROR"))]
+       [(TNum) (if (TNum? (typeof-cast-env arg typed-env)) 
+                    targ 
+                    (error "TYPE_ERROR"))]
        [(TAny) (error "TYPE_ERROR")]
-       [(TFun a b) (if (or (TAny? a) (TAny? b))
-                       (error "TYPE_ERROR")
-                       targ)])]
+       [(TFun a b) (let [( f (typeof-cast-env arg typed-env))]
+                          (if (or (TAny? a) (TAny? b))
+                              (error "TYPE_ERROR")
+                       targ))])]
     ;AE
     [(add l r)
      (if (and (TNum? (typeof-cast-env l typed-env)) 
@@ -381,7 +387,7 @@
            (bb (typeof-cast-env b typed-env))]
        (if (subtype? bb (TFun-arg ff))
                           (TFun-ret ff)
-                          (error "TYPE_ERROR")))]
+                          (error "TYPE_ERROR" bb (TFun-arg ff))))]
     ))
   (typeof-cast-env expr (make-immutable-hash '())))
 

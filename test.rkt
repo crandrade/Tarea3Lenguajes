@@ -50,7 +50,9 @@
 
 ;;test compile
 (test (compile (deBruijn (parse '2)))
-(list (INT_CONST 2)))
+      (list (INT_CONST 2)))
+
+
 
 (test (compile (deBruijn (parse '{{fun {x : Num} : Bool
                                    {< x 10}} {+ 2 3}}))) 
@@ -76,6 +78,9 @@
         (list (ACCESS 0) (INT_CONST 1) (ADD) (RETURN))
         (MTFun (MTNum) (MTNum)))
        (APPLY)))
+
+(test (compile (parse '{cast Num (and #t #f)}))
+      (list (BOOL_CONST #f) (BOOL_CONST #t) (AND) (CHECKCAST (MTNum))))
 
 ;; test typeof
 (test (typeof (parse '{with : Num {x : Num 3} 
@@ -155,8 +160,8 @@
       (TBool))
 
 ;; test typed-compile
-(test (typed-compile '{cast Num (and #t #f)})
-(list (BOOL_CONST #f) (BOOL_CONST #t) (AND) (CHECKCAST (MTNum))))
+(test/exn (typed-compile '{cast Num (and #t #f)})
+      "TYPE_ERROR")
 
 (test
  (typed-compile '{+ 3 {with : Num {x : Num 1}
