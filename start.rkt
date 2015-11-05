@@ -163,11 +163,11 @@
                 (error "TYPE_ERROR"))]
     ;AE
     [(add l r)
-     (if (and (TNum? (typeof-env l typed-env)) (TNum (typeof-env r typed-env)))
+     (if (and (TNum? (typeof-env l typed-env)) (TNum? (typeof-env r typed-env)))
          (TNum)
          (error "TYPE_ERROR"))]
     [(sub l r)      
-     (if (and (TNum? (typeof-env l typed-env)) (TNum (typeof-env r typed-env)))
+     (if (and (TNum? (typeof-env l typed-env)) (TNum? (typeof-env r typed-env)))
          (TNum)
          (error "TYPE_ERROR"))]
     ;preposiciones        
@@ -210,7 +210,7 @@
                       (let [(f (typeof-env f-id typed-env)) 
                             (r (typeof-env b typed-env))] 
                         (if (equal? (TFun-arg f) r)
-                            f
+                            (TFun-ret f)
                             (error "TYPE_ERROR")))
                       (error "TYPE_ERROR"))]
     ))
@@ -220,7 +220,18 @@
 ;; typeof ::= Expr => TYPE
 ;; gives the TYPE of a valid expression, or an error, 
 ;; considering subtypes
-(define (typeof-with-sub expr)  
+(define (typeof-with-sub expr)
+  (define (subtype? t1 t2)
+    (if (equal? t1 t2) #t
+      (match t1
+        [(TFun a b) (and (TFun? t2) 
+                          (and (subtype? (TFun-arg t1) 
+                                           (TFun-arg t2)) 
+                               (subtype? (TFun-ret t1) 
+                                           (TFun-ret t2))))]
+        [(TNum) (or (TNum? t2) (TAny? t2))]
+        [(TBool) (or (TBool? t2) (TAny? t2))]
+        [_ #f])))
   (define (typeof-sub-env sexpr typed-env)
   (match sexpr
     [(num n) (TNum)]
@@ -262,38 +273,59 @@
            (error "TYPE_ERROR")
            (if (equal? tl tr)
                tl
-               (error "TYPE_ERROR"))))]
+               (TAny))))]
     [(my-eq a b)
      (let ([ta (typeof-sub-env a typed-env)]
            [tb (typeof-sub-env b typed-env)])
        (if (equal? a b)
            (TBool)
            (error "TYPE_ERROR")))]
-    [(fun x e b tb) (if (equal? (typeof-sub-env b (hash-set typed-env x e)) 
-                                tb)
+    [(fun x e b tb) (if (subtype? 
+                         (typeof-sub-env 
+                          b 
+                          (hash-set typed-env x e))
+                         tb)
                         (TFun e tb)
                         (error "TYPE_ERROR"))]
-    [(app f-id b) (if (fun? f-id)
-                      (let [(f (typeof-sub-env f-id typed-env)) 
-                            (r (typeof-sub-env b typed-env))] 
-                        (if (equal? (TFun-arg f) r)
-                            f
-                            (error "TYPE_ERROR")))
-                      (error "TYPE_ERROR"))]
+    [(app f-id b) 
+     (let [(ff (typeof-sub-env f-id typed-env))
+           (bb (typeof-sub-env b typed-env))]
+       (if (subtype? bb (TFun-arg ff))
+                          (TFun-ret ff)
+                          (error "TYPE_ERROR")))]
     ))
   (typeof-sub-env expr (make-immutable-hash '())))
 
 ;; typeof-with-cast ::= Expr => TYPE
 ;; gives the TYPE of a valid expression, or an error
 ;; considering subtypes and cast
-(define (typeof-with-cast expr) 
-  (define (typeof-cast-env sexpr typed-env)
+(define (typeof-with-cast expr)
+  (define (subtype? t1 t2)
+    (if (equal? t1 t2) #t
+      (match t1
+        [(TFun a b) (and (TFun? t2) 
+                          (and (subtype? (TFun-arg t1) 
+                                           (TFun-arg t2)) 
+                               (subtype? (TFun-ret t1) 
+                                           (TFun-ret t2))))]
+        [(TNum) (or (TNum? t2) (TAny? t2))]
+        [(TBool) (or (TBool? t2) (TAny? t2))]
+        [_ #f])))
+ (define (typeof-cast-env sexpr typed-env)
   (match sexpr
     [(num n) (TNum)]
     [(bool b) (TBool)]
     [(id x) (if (hash-has-key? typed-env x) 
                 (hash-ref typed-env x) 
                 (error "TYPE_ERROR"))]
+    [(cast targ arg) 
+     (match targ
+       [(TBool) targ]
+       [(TNum) targ]
+       [(TAny) (error "TYPE_ERROR")]
+       [(TFun a b) (if (or (TAny? a) (TAny? b))
+                       (error "TYPE_ERROR")
+                       targ)])]
     ;AE
     [(add l r)
      (if (and (TNum? (typeof-cast-env l typed-env)) 
@@ -336,24 +368,28 @@
            [tb (typeof-cast-env b typed-env)])
        (if (equal? a b)
            (TBool)
-           (error "TYPE_ERROR")))]
-    [(fun x e b tb) (if (equal? (typeof-cast-env b (hash-set typed-env x e)) 
-                                tb)
+           (error "TYPE_ERROR")))]    
+    [(fun x e b tb) (if (subtype? 
+                         (typeof-cast-env 
+                          b 
+                          (hash-set typed-env x e))
+                         tb)
                         (TFun e tb)
                         (error "TYPE_ERROR"))]
-    [(app f-id b) (if (fun? f-id)
-                      (let [(f (typeof-cast-env f-id typed-env)) 
-                            (r (typeof-cast-env b typed-env))] 
-                        (if (equal? (TFun-arg f) r)
-                            f
-                            (error "TYPE_ERROR")))
-                      (error "TYPE_ERROR"))]
+    [(app f-id b) 
+     (let [(ff (typeof-cast-env f-id typed-env))
+           (bb (typeof-cast-env b typed-env))]
+       (if (subtype? bb (TFun-arg ff))
+                          (TFun-ret ff)
+                          (error "TYPE_ERROR")))]
     ))
   (typeof-cast-env expr (make-immutable-hash '())))
 
 ;; typed-compile ::= sexpr => List
 ;; compiles the s-expression into an executable list/stack of 
 ;; operations, replacing vars with indexes and type-checking
-
-(define (typed-compile s-expr) 
-  (compile (deBruijn (parse s-expr))))
+(define (typed-compile s-expr)
+  (begin
+    (define expr (parse s-expr))
+    (typeof-with-cast expr)
+    (compile (deBruijn expr))))

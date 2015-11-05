@@ -78,25 +78,57 @@
        (APPLY)))
 
 ;; test typeof
-(test (typeof 'expr) #t)
+(test (typeof (parse '{with : Num {x : Num 3} 
+                     {+ {- 1 2} x}})) 
+      (TNum))
 
-(test (typeof 'expr) #t)
+(test/exn (typeof (parse '{{fun {f : Num} : Bool #t} #t}))
+          "TYPE_ERROR")
 
-(test (typeof 'expr) #t)
+(test (typeof (parse '{fun {f : Num} : Bool #t}))
+  (TFun (TNum) (TBool)))
 
 ;; test typeof-with-sub
-(test (typeof-with-sub 'expr) #t)
+(test (typeof-with-sub (parse '{if #t
+                             1
+                             #t}))
+      (TAny))
 
-(test (typeof-with-sub 'expr) #t)
+(test  (typeof-with-sub 
+   (parse 
+     '{with : Any {f : {Any -> Any}
+                  {fun {x : Any} : Any x}}
+            {f 1}
+         }))
+       (TAny))
 
-(test (typeof-with-sub 'expr) #t)
+(test 
+ (typeof-with-sub (parse '{with : Num {f : {Num -> Num}
+                  {fun {x : Num} : Num x}}                                 
+         {with : Num {h : {Any -> Num}
+                        {fun {x : Any} : Num 5}}
+               {with : Num {applyTo1 : {{Num -> Num} -> Num}
+                                     {fun {x : {Num -> Num}} : Num {x 1}}}
+                     {applyTo1 f}}}}))
+ (TNum))
+(test (typeof-with-sub (parse '{with : Any {f : {Num -> Num}
+                  {fun {x : Num} : Num x}}
+         {with : Any {g : {Num -> Any}
+                        {fun {x : Num} : Any #f}}
+               {with : Any {applyTo1 : {{Num -> Any} -> Any}
+                                     {fun {x : {Num -> Any}} : Any {x 1}}}
+                     {applyTo1 g}}}}))
+      (TAny))
 
 ;;test typeof-with-cast
-(test (typeof-with-cast 'expr) #t)
+(test (typeof-with-cast 
+       (parse 
+        '{{fun { x : Num} : Any  {cast Num x}} 3})) 
+      (TAny))
 
-(test (typeof-with-cast 'expr) #t)
+(test/exn (typeof-with-cast (parse '{cast Any 1})) "TYPE_ERROR")
 
-(test (typeof-with-cast 'expr) #t)
+(test (typeof-with-cast (parse '{{fun { x : Num} : Any  x} 3})) (TAny))
 
 ;; test typed-compile
 (test (typed-compile 'expr) #t)
@@ -104,3 +136,20 @@
 (test (typed-compile 'expr) #t)
 
 (test (typed-compile 'expr) #t)
+
+;; test m-subtype?
+(test (m-subtype? (MTNum) (MTNum)) #t)
+
+(test (m-subtype? (MTNum) (MTAny)) #t)
+
+(test (m-subtype? (MTBool) (MTAny)) #t)
+
+(test (m-subtype? (MTAny) (MTAny)) #t)
+
+(test (m-subtype? (MTAny) (MTBool)) #f)
+
+(test (m-subtype? (MTFun (MTAny) (MTBool)) (MTFun (MTAny) (MTAny))) #t)
+
+(test (m-subtype? (MTFun (MTNum) (MTBool)) (MTFun (MTAny) (MTAny))) #t)
+
+(test (m-subtype? (MTFun (MTAny) (MTAny)) (MTFun (MTAny) (MTBool))) #f)
