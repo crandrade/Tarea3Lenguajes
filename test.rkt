@@ -131,7 +131,8 @@
 (test (typeof-with-cast (parse '{{fun { x : Num} : Any  x} 3})) (TAny))
 
 ;; test typed-compile
-(test (typed-compile 'expr) #t)
+(test (typed-compile '{cast Num (and #t #f)})
+(list (BOOL_CONST #f) (BOOL_CONST #t) (AND) (CHECKCAST (MTNum))))
 
 (test (typed-compile 'expr) #t)
 
