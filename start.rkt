@@ -333,7 +333,7 @@
        [(TFun a b) (let [(f (typeof-cast-env arg typed-env))]
                           (if (subtype? targ f)
                               targ
-                              (error "TYPE_ERROR" targ f)))])]
+                              (error "TYPE_ERROR")))])]
     ;AE
     [(add l r)
      (if (and (TNum? (typeof-cast-env l typed-env)) 
