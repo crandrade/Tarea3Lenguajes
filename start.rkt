@@ -199,7 +199,7 @@
     [(my-eq a b)
      (let ([ta (typeof-env a typed-env)]
            [tb (typeof-env b typed-env)])
-       (if (equal? a b)
+       (if (equal? ta tb)
            (TBool)
            (error "TYPE_ERROR")))]
     [(fun x e b tb) (if (equal? (typeof-env b (hash-set typed-env x e)) 
@@ -277,7 +277,7 @@
     [(my-eq a b)
      (let ([ta (typeof-sub-env a typed-env)]
            [tb (typeof-sub-env b typed-env)])
-       (if (equal? a b)
+       (if (equal? ta tb)
            (TBool)
            (error "TYPE_ERROR")))]
     [(fun x e b tb) (if (subtype? 
@@ -366,7 +366,7 @@
     [(my-eq a b)
      (let ([ta (typeof-cast-env a typed-env)]
            [tb (typeof-cast-env b typed-env)])
-       (if (equal? a b)
+       (if (equal? ta tb)
            (TBool)
            (error "TYPE_ERROR")))]    
     [(fun x e b tb) (if (subtype? 

@@ -88,7 +88,22 @@
 (test (typeof (parse '{fun {f : Num} : Bool #t}))
   (TFun (TNum) (TBool)))
 
+(test (typeof 
+       (app (fun 'x 
+                 (TNum) 
+                 (add (num 1) (id 'x)) 
+                 (TNum))
+            (num 2))) 
+       (TNum))
+
 ;; test typeof-with-sub
+
+(test (typeof (parse '{fun {f : Num} : Bool #t}))
+  (TFun (TNum) (TBool)))
+
+(test/exn (typeof (parse '{{fun {f : Num} : Bool #t} #t}))
+          "TYPE_ERROR")
+
 (test (typeof-with-sub (parse '{if #t
                              1
                              #t}))
